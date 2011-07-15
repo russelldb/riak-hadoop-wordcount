@@ -13,6 +13,8 @@ You need to do a lot ('cos I just started on this).
 7. Run the M/R job
 8. Look at the results
 
+NOTE: Running Riak and Hadoop means you need a lot of open file descriptors, best set your ulimit to unlimited.
+
 *** Install Riak
 The [[http://wiki.basho.com][Basho]] wiki is the best place to start for this.
 
