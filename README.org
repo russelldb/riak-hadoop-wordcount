@@ -1,0 +1,69 @@
+* Riak Hadoop Word Count Example
+This is a sample project that uses [[https://github.com/russelldb/riak-hadoop][Riak-Hadoop]] to perform the canonical word count example Map/Reduce job.
+
+** Set up
+You need to do a lot ('cos I just started on this).
+
+Install Riak
+Install Hadoop (I went for fake cluster mode)
+Clone and build the riak client
+Clone and build riak-hadoop
+Put some data in your wordCount bucket
+Package this project as a jar
+Run the M/R job
+Look at the results
+
+*** Install Riak
+The [[http://wiki.basho.com][Basho]] wiki is the best place to start for this.
+
+*** Install Hadoop
+I followed the steps [[http://hadoop.apache.org/common/docs/current/single_node_setup.html][here]]. I went for [[http://hadoop.apache.org/common/docs/current/single_node_setup.html#PseudoDistributed][Pseudo Distributed]].
+
+*** Clone and build Riak-java-client
+Grab it from [[https://github.com/basho/riak-java-client/][github]]. Then just 
+
+#+BEGIN_SRC 
+    mvn clean install
+#+END_SRC
+
+*** Clone and build Riak-Hadoop
+Grab it from [[https://github.com/russelldb/riak-hadoop][github]]. The just
+
+#+BEGIN_SRC
+    mvn clean install
+#+END_SRC
+
+*** Put some data in your riak 'wordCount' bucket
+#+BEGIN_SRC
+curl -v -X PUT curl -v -X PUT -d 'hello world' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/helloWorld
+curl -v -X PUT curl -v -X PUT -d 'goodbye cruel world' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/cruel
+curl -v -X PUT curl -v -X PUT -d 'you say hello I say goodbye' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/helloGoodbye
+curl -v -X PUT curl -v -X PUT -d 'the world is just a great big onion' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/onion
+curl -v -X PUT curl -v -X PUT -d 'never gonna say goodbye' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/rick
+#+END_SRC
+
+*** Package this project
+Clone it, package it.
+
+#+BEGIN_SRC
+    mvn clean package
+#+END_SRC
+
+*** Run the job
+Copy the jar from the previous step to your hadoop install directory and kick off the m/r job.
+
+#+BEGIN_SRC
+    cp target/riak-hadoop-wordcount-1.0-SNAPSHOT-job.jar $HADOOP_HOME
+    cd $HADOOP_HOME
+    bin/hadoop jar riak-hadoop-wordcount-1.0-SNAPSHOT-job.jar 
+#+END_SRC
+
+*** Look at the results
+If it all went well then the results are in your hadoop file system
+
+#+BEGIN_SRC
+     bin/hadoop fs -cat /tmp/word_count/*
+#+END_SRC
+
+** And then?
+More examples coming soon.
