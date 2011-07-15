@@ -4,14 +4,14 @@ This is a sample project that uses [[https://github.com/russelldb/riak-hadoop][R
 ** Set up
 You need to do a lot ('cos I just started on this).
 
-Install Riak
-Install Hadoop (I went for fake cluster mode)
-Clone and build the riak client
-Clone and build riak-hadoop
-Put some data in your wordCount bucket
-Package this project as a jar
-Run the M/R job
-Look at the results
+1. Install Riak
+2. Install Hadoop (I went for fake cluster mode)
+3. Clone and build the riak client
+4. Clone and build riak-hadoop
+5. Put some data in your wordCount bucket
+6. Package this project as a jar
+7. Run the M/R job
+8. Look at the results
 
 *** Install Riak
 The [[http://wiki.basho.com][Basho]] wiki is the best place to start for this.
