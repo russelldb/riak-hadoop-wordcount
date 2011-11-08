@@ -26,6 +26,13 @@
 			<version>0.20.203.0</version>
 			<scope>provided</scope>
 		</dependency>
+		<!-- TEST -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.4</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

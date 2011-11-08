@@ -14,56 +14,48 @@
 package com.basho.riak.hadoop;
 
 import java.io.IOException;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.basho.riak.client.IRiakObject;
 import com.basho.riak.client.cap.DefaultResolver;
-import com.basho.riak.client.cap.VClock;
-import com.basho.riak.client.convert.ConversionException;
-import com.basho.riak.client.convert.Converter;
+import com.basho.riak.client.convert.JSONConverter;
+import com.basho.riak.client.query.indexes.BinIndex;
+import com.basho.riak.client.raw.query.indexes.BinValueQuery;
+import com.basho.riak.hadoop.config.RiakConfig;
+import com.basho.riak.hadoop.config.RiakPBLocation;
+import com.basho.riak.hadoop.keylisters.SecondaryIndexesKeyLister;
 
 public class RiakWordCount extends Configured implements Tool {
 
     /**
      * The map class of WordCount.
      */
-    public static class TokenCounterMapper extends RiakMapper<String, Text, IntWritable> {
-
-        /**
-         * @param converter
-         * @param resolver
-         */
-        public TokenCounterMapper() {
-            super(new Converter<String>() {
-                public IRiakObject fromDomain(String string, VClock vclock) throws ConversionException {
-                    // NO -OP
-                    return null;
-                }
-
-                public String toDomain(IRiakObject riakObject) throws ConversionException {
-                    return riakObject.getValueAsString();
-                }
-            }, new DefaultResolver<String>());
-        }
+    public static class TokenCounterMapper extends RiakMapper<Syllabus, Text, IntWritable> {
 
         private final static IntWritable one = new IntWritable(1);
         private Text word = new Text();
 
-        public void map(BucketKey key, String value, Context context) throws IOException, InterruptedException {
-            final StringTokenizer tokenizer = new StringTokenizer(value);
-            while (tokenizer.hasMoreTokens()) {
-                word.set(tokenizer.nextToken());
+        public TokenCounterMapper() {
+            // set up with Converter/Resolver instances
+            super(new JSONConverter<Syllabus>(Syllabus.class, ""), new DefaultResolver<Syllabus>());
+        }
+
+        public void map(BucketKey key, Syllabus value, Context context) throws IOException, InterruptedException {
+
+            String[] splits = new String[] {};
+            if (value != null && value.getGoogleSnippet() != null) {
+                splits = value.getGoogleSnippet().split("[\\s\\.,\\?!;:\"]");
+            }
+
+            for (String s : splits) {
+                word.set(s.trim().toLowerCase());
                 context.write(word, one);
             }
         }
@@ -72,14 +64,21 @@ public class RiakWordCount extends Configured implements Tool {
     /**
      * The reducer class of WordCount
      */
-    public static class TokenCounterReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+    public static class TokenCounterReducer extends Reducer<Text, IntWritable, Text, WordCountResult> {
         public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException,
                 InterruptedException {
             int sum = 0;
+
             for (IntWritable value : values) {
                 sum += value.get();
             }
-            context.write(key, new IntWritable(sum));
+
+            String riakKey = key.toString();
+
+            if (sum > 1 && !"".equals(riakKey)) { // drop any words that only
+                                                  // show up once
+                context.write(key, new WordCountResult(riakKey, sum));
+            }
         }
     }
 
@@ -97,18 +96,42 @@ public class RiakWordCount extends Configured implements Tool {
      * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
      */
     public int run(String[] args) throws Exception {
+        String[] keys = new String[10000];
+
+        for (int i = 0; i < 10000; i++) {
+            keys[i] = String.valueOf(i + 1000);
+        }
         Configuration conf = getConf();
-        conf = RiakConfig.setBucket(conf, "wordCount");
-        conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8087));
-        conf = RiakConfig.setHadoopClusterSize(conf, 1);
-        Job job = new Job(conf, "WordCount");
+        // conf = RiakConfig.setKeyLister(conf, new
+        // BucketKeyLister("syllabi"));//(Arrays.asList(keys), "syllabi"));
+        conf = RiakConfig.setKeyLister(conf,
+                                       new SecondaryIndexesKeyLister(new BinValueQuery(BinIndex.named("date_added"),
+                                                                                       "syllabi", "2002-12-18")));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.10", 8087));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.11", 8087));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.12", 8087));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.13", 8087));
+        conf = RiakConfig.setOutputBucket(conf, "syllabi_count");
+        conf = RiakConfig.setHadoopClusterSize(conf, 4);
+
+        Job job = new Job(conf, "WordCount-Syllabi");
+
         job.setJarByClass(RiakWordCount.class);
-        job.setMapperClass(TokenCounterMapper.class);
-        job.setReducerClass(TokenCounterReducer.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+
         job.setInputFormatClass(RiakInputFormat.class);
-        FileOutputFormat.setOutputPath(job, new Path("/tmp/word_count"));
+        job.setMapperClass(TokenCounterMapper.class);
+
+        job.setReducerClass(TokenCounterReducer.class);
+
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(IntWritable.class);
+
+        job.setOutputFormatClass(RiakOutputFormat.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(WordCountResult.class);
+
+        job.setNumReduceTasks(4);
+
         job.submit();
         return job.waitForCompletion(true) ? 0 : 1;
     }
