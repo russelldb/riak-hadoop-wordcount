@@ -75,5 +75,4 @@ public class WordCountResult implements Writable {
         out.writeUTF(word);
         out.write(count);
     }
-
 }

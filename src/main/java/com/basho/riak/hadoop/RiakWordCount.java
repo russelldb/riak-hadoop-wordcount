@@ -37,21 +37,20 @@ public class RiakWordCount extends Configured implements Tool {
     /**
      * The map class of WordCount.
      */
-    public static class TokenCounterMapper extends RiakMapper<Syllabus, Text, IntWritable> {
+    public static class TokenCounterMapper extends RiakMapper<Chapter, Text, IntWritable> {
 
         private final static IntWritable one = new IntWritable(1);
         private Text word = new Text();
 
         public TokenCounterMapper() {
             // set up with Converter/Resolver instances
-            super(new JSONConverter<Syllabus>(Syllabus.class, ""), new DefaultResolver<Syllabus>());
+            super(new JSONConverter<Chapter>(Chapter.class, ""), new DefaultResolver<Chapter>());
         }
 
-        public void map(BucketKey key, Syllabus value, Context context) throws IOException, InterruptedException {
-
+        public void map(BucketKey key, Chapter value, Context context) throws IOException, InterruptedException {
             String[] splits = new String[] {};
-            if (value != null && value.getGoogleSnippet() != null) {
-                splits = value.getGoogleSnippet().split("[\\s\\.,\\?!;:\"]");
+            if (value != null && value.getText() != null) {
+                splits = value.getText().split("[\\s\\.,\\?!;:\"]");
             }
 
             for (String s : splits) {
@@ -102,19 +101,17 @@ public class RiakWordCount extends Configured implements Tool {
             keys[i] = String.valueOf(i + 1000);
         }
         Configuration conf = getConf();
-        // conf = RiakConfig.setKeyLister(conf, new
-        // BucketKeyLister("syllabi"));//(Arrays.asList(keys), "syllabi"));
         conf = RiakConfig.setKeyLister(conf,
-                                       new SecondaryIndexesKeyLister(new BinValueQuery(BinIndex.named("date_added"),
-                                                                                       "syllabi", "2002-12-18")));
+                                       new SecondaryIndexesKeyLister(new BinValueQuery(BinIndex.named("author"),
+                                                                                       "wordcount", "Mark Twain")));
         conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.10", 8087));
         conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.11", 8087));
         conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.12", 8087));
         conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.13", 8087));
-        conf = RiakConfig.setOutputBucket(conf, "syllabi_count");
+        conf = RiakConfig.setOutputBucket(conf, "wordcount_out");
         conf = RiakConfig.setHadoopClusterSize(conf, 4);
 
-        Job job = new Job(conf, "WordCount-Syllabi");
+        Job job = new Job(conf, "Riak-WordCount");
 
         job.setJarByClass(RiakWordCount.class);
 
