@@ -12,7 +12,7 @@ You need to do a lot
 5. Run the M/R job
 6. Look at the results
 
-NOTE: Running Riak and Hadoopon a single machine means you need a lot
+NOTE: Running Riak and Hadoop on a single machine means you need a lot
 of open file descriptors, best set your =ulimit= to =unlimited=.
 
 *** Install Riak
@@ -21,7 +21,7 @@ that you run a =devrel= cluster on localhost ([[http://wiki.basho.com/Building-a
 
 Also, this demo uses Riak's Secondary indexes, so you'll need to
 enable them, by switching to the =leveldb= backend. To do this simply
-edit the -app.config= for each Riak node, changing the =riak_kv=
+edit the =app.config= for each Riak node, changing the =riak_kv=
 storage backend to =riak_kv_eleveldb_backend=
 
 #+BEGIN_SRC
@@ -66,17 +66,15 @@ Riak, in the =wordcount= bucket. The easiest way is to run it with
 maven.
 
 #+BEGIN_SRC
-    mvn exec:java -Dexec.mainClass="com.basho.riak.hadoop.Bootstrap" \
-    -Dexec.classpathScope=runtime
+    mvn exec:java -Dexec.mainClass="com.basho.riak.hadoop.Bootstrap" -Dexec.classpathScope=runtime
 #+END_SRC
 
 The class assumes you are using a loca devrel Riak cluster. If you're
-not, you can specify your Riak install's tarnsport and host using
+not, you can specify your Riak install's transport and host using
 =exec.args=
 
 #+BEGIN_SRC
-    mvn exec:java -Dexec.mainClass="com.basho.riak.hadoop.Bootstrap" \
-    -Dexec.classpathScope=runtime -Dexec.args="[pb|http PBHOST:PORT|HTTP_URL]"
+    mvn exec:java -Dexec.mainClass="com.basho.riak.hadoop.Bootstrap" -Dexec.classpathScope=runtime -Dexec.args="[pb|http PBHOST:PORT|HTTP_URL]"
 #+END_SRC
 
 *** Package this project
