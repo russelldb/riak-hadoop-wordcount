@@ -104,10 +104,10 @@ public class RiakWordCount extends Configured implements Tool {
         conf = RiakConfig.setKeyLister(conf,
                                        new SecondaryIndexesKeyLister(new BinValueQuery(BinIndex.named("author"),
                                                                                        "wordcount", "Mark Twain")));
-        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.10", 8087));
-        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.11", 8087));
-        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.12", 8087));
-        conf = RiakConfig.addLocation(conf, new RiakPBLocation("33.33.33.13", 8087));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8081));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8082));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8083));
+        conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8084));
         conf = RiakConfig.setOutputBucket(conf, "wordcount_out");
         conf = RiakConfig.setHadoopClusterSize(conf, 4);
 

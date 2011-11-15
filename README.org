@@ -1,51 +1,96 @@
 * Riak Hadoop Word Count Example
-This is a sample project that uses [[https://github.com/russelldb/riak-hadoop][Riak-Hadoop]] to perform the canonical word count example Map/Reduce job.
+This is a sample project that uses [[https://github.com/russelldb/riak-hadoop][Riak-Hadoop]] to perform the
+canonical word count example Map/Reduce job.
 
 ** Set up
-You need to do a lot ('cos I just started on this).
+You need to do a lot
 
 1. Install Riak
 2. Install Hadoop (I went for fake cluster mode)
-3. Clone and build the riak client
-4. Clone and build riak-hadoop
-5. Put some data in your wordCount bucket
-6. Package this project as a jar
-7. Run the M/R job
-8. Look at the results
+3. Bootstrap your data
+4. Package this project as a jar
+5. Run the M/R job
+6. Look at the results
 
-NOTE: Running Riak and Hadoop means you need a lot of open file descriptors, best set your ulimit to unlimited.
+NOTE: Running Riak and Hadoopon a single machine means you need a lot
+of open file descriptors, best set your =ulimit= to =unlimited=.
 
 *** Install Riak
-The [[http://wiki.basho.com][Basho]] wiki is the best place to start for this.
+The [[http://wiki.basho.com][Basho]] wiki is the best place to start for this. This demo expects
+that you run a =devrel= cluster on localhost ([[http://wiki.basho.com/Building-a-Development-Environment.html][See here for a how-to]].)
+
+Also, this demo uses Riak's Secondary indexes, so you'll need to
+enable them, by switching to the =leveldb= backend. To do this simply
+edit the -app.config= for each Riak node, changing the =riak_kv=
+storage backend to =riak_kv_eleveldb_backend=
+
+#+BEGIN_SRC
+{riak_kv, [
+            %% Storage_backend specifies the Erlang module defining the storage
+            %% mechanism that will be used on this node.
+            {storage_backend, riak_kv_eleveldb_backend},
+            %% ...and the rest
+]},
+#+END_SRC
 
 *** Install Hadoop
-I followed the steps [[http://hadoop.apache.org/common/docs/current/single_node_setup.html][here]]. I went for [[http://hadoop.apache.org/common/docs/current/single_node_setup.html#PseudoDistributed][Pseudo Distributed]].
+I followed the steps [[http://hadoop.apache.org/common/docs/current/single_node_setup.html][here]]. I went for [[http://hadoop.apache.org/common/docs/current/single_node_setup.html#PseudoDistributed][Pseudo Distributed]]. 
 
-*** Clone and build Riak-java-client
-Grab it from [[https://github.com/basho/riak-java-client/][github]]. Then just 
+*** Update Jackosn libraries
+ *BIG CAVEAT* Hadoop has some weird classpath issues. There is no
+hierarchical or scoped classloader, unlike in Servlet/JEE
+containers. Riak Java Client depends on Jackson, and so does Hadoop,
+but *different versions* (natch). When the Riak-Hadoop driver is
+finished it will come with a custom classloader, until then, you'll
+need to replace your Hadoop =lib/jackson*.jar= libraries with the ones
+in the =lib= folder of this repo _on your JobTracker/namenode
+only_. On your data/tasknodes, you need only *remove* the jackson jars
+from your =hadoop/lib= directory, since the classes in the job jar are
+at least loaded (if not in the right order) on the tasknodes. There is
+an [[https://issues.apache.org/jira/browse/MAPREDUCE-1700][open bug]] about this in Hadoop's JIRA, since it has been open for 18
+months, I doubt it is about to be fixed anytime soon. I'm very sorry
+about this. It will be addressed soon.
 
-#+BEGIN_SRC 
+*** Bootstrap your data
+Clone and build this project
+#+BEGIN_SRC
+    git clone https://github.com/russelldb/riak-hadoop-wordcount
+    cd riak-hadoop-wordcount
     mvn clean install
 #+END_SRC
 
-*** Clone and build Riak-Hadoop
-Grab it from [[https://github.com/russelldb/riak-hadoop][github]]. The just
+Then just run the =Bootstrap= class to load some data. The repo
+contains a copy of [[http://www.gutenberg.org/][Project Gutenberg's]] [[http://www.gutenberg.org/ebooks/76][Adventures Of Huckleberry Finn]].
+The =Bootstrap= class just loads each chapter into its own key in
+Riak, in the =wordcount= bucket. The easiest way is to run it with
+maven.
 
 #+BEGIN_SRC
-    mvn clean install
+    mvn exec:java -Dexec.mainClass="com.basho.riak.hadoop.Bootstrap" \
+    -Dexec.classpathScope=runtime
 #+END_SRC
 
-*** Put some data in your riak 'wordCount' bucket
+The class assumes you are using a loca devrel Riak cluster. If you're
+not, you can specify your Riak install's tarnsport and host using
+=exec.args=
+
 #+BEGIN_SRC
-curl -v -X PUT curl -v -X PUT -d 'hello world' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/helloWorld
-curl -v -X PUT curl -v -X PUT -d 'goodbye cruel world' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/cruel
-curl -v -X PUT curl -v -X PUT -d 'you say hello I say goodbye' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/helloGoodbye
-curl -v -X PUT curl -v -X PUT -d 'the world is just a great big onion' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/onion
-curl -v -X PUT curl -v -X PUT -d 'never gonna say goodbye' -H "Content-Type: text/plain" http://127.0.0.1:8098/riak/wordCount/rick
+    mvn exec:java -Dexec.mainClass="com.basho.riak.hadoop.Bootstrap" \
+    -Dexec.classpathScope=runtime -Dexec.args="[pb|http PBHOST:PORT|HTTP_URL]"
 #+END_SRC
 
 *** Package this project
-Clone it, package it.
+As stated earlier, the demo assumes you're running a local devrel Riak
+cluster. If not, you need to edit the =Riak Locations= in the
+=RiakWordCount= class. Using you're favourite editor, simply change
+the locations to the actual locations of your Riak node(s). E.g.
+
+#+BEGIN_SRC
+    conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8081));
+    conf = RiakConfig.addLocation(conf, new RiakPBLocation("127.0.0.1", 8082));
+#+END_SRC
+
+Then package the job jar:
 
 #+BEGIN_SRC
     mvn clean package
@@ -61,11 +106,27 @@ Copy the jar from the previous step to your hadoop install directory and kick of
 #+END_SRC
 
 *** Look at the results
-If it all went well then the results are in your hadoop file system
+If it all went well then the results are in your Riak cluster, in the
+=wordcount_out= bucket.
 
 #+BEGIN_SRC
-     bin/hadoop fs -cat /tmp/word_count/*
+     curl http://127.0.0.1:8091/riak/wordcount_out?keys=stream
+#+END_SRC
+
+Will show you the keys. Luckily we index the data, too. You can
+perform range queries, to see the most common words, something like
+the following will do:
+
+#+BEGIN_SRC
+    curl 127.0.0.1:8091/buckets/wordcount_out/index/count_int/1000/3000
+#+END_SRC
+
+Or maybe you want to see all the =f= words Twain used?
+
+#+BEGIN_SRC
+    curl 127.0.0.1:8091/buckets/wordcount_out/index/word_bin/f/g
 #+END_SRC
 
 ** And then?
-More examples coming soon.
+If you try this, please let me know how you get on via the [[http://lists.basho.com/mailman/listinfo/riak-users_lists.basho.com][Riak mailing list]]
+or GitHub.

@@ -60,7 +60,7 @@ import com.basho.riak.client.raw.pbc.PBClientConfig;
  * -Dexec.classpath Scope=runtime -Dexec.args="http http://127.0.0.1:8098/riak"
  * </code></p>
  * If you don't specify a transport/host/url then it will use the pb interface
- * on 127.0.0.1:8087
+ * on 127.0.0.1:8081
  * 
  * Or just call it with plain old <code>java -cp <b>*ALL THE JARS*</b></code>
  * com.basho.riak.hadoop.Bootstrap
@@ -73,7 +73,7 @@ public class Bootstrap {
     private static final String BOOK = "Adventures of Huckleberry Finn";
     private static final String BUCKET = "wordcount";
     private static final String HUCK_FIN = "huck_fin.txt";
-    private static final int PORT = 8087;
+    private static final int PORT = 8081;
     private static final Charset CHARSET = Charset.forName("UTF8");
     private static final CharsetDecoder DECODER = CHARSET.newDecoder();
     private static final Pattern START_PATTERN = Pattern.compile("\\*\\*\\* START.*\\*\\*\\*");

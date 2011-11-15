@@ -2,5 +2,4 @@
 .project
 .settings/
 bin/
-lib/
 target/
